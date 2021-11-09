@@ -63,9 +63,9 @@ bash thermmode-uiclient.sh /path/to/your/home.conf
 Missing variables from the configuration file are assumed to be set in your shell (locally or as enviroment variables).
 
 ## Automatic trigger via Crontab
-Trigger the Netatmo thermostat mode update every minute using crontab (`sudo crontab -e`) and log the output in syslog.
+Trigger the Netatmo thermostat mode update every two minute using crontab (`sudo crontab -e`) and log the output in syslog.
 ```
-*/1 * * * * thermmode-uiclient.sh my-home.conf 2>&1 | /usr/bin/logger -t netatmo 
+*/2 * * * * thermmode-uiclient.sh my-home.conf 2>&1 | /usr/bin/logger -t netatmo 
 ```
 Make sure that the correct path to both the script and configuration are set.
 

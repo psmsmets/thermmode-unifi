@@ -28,7 +28,7 @@ SCRIPT=$( basename "$0" )
 
 function usage {
 #
-# Message to display for usage and help.
+# Message to display for usage and help
 #
     local txt=(
 "UniFi client montoring for geolocation-like functionality of the Netatmo Smart Thermostat."
@@ -55,10 +55,9 @@ function usage {
 }
 
 
-function badUsage
-{
+function badUsage {
 #
-# Message to display when bad usage.
+# Message to display when bad usage
 #
     local message="$1"
     local txt=(
@@ -107,11 +106,13 @@ function parse_config { # parse_config file.cfg var_name1 var_name2
     local keylist="${@:2}"    # positional parameters 2 and following
     local lhs rhs
 
-    if [[ ! -f "$configfile" ]]; then
+    if [[ ! -f "$configfile" ]];
+    then
         >&2 echo "\"$configfile\" is not a file!"
         exit 1
     fi
-    if [[ ! -r "$configfile" ]]; then
+    if [[ ! -r "$configfile" ]];
+    then
         >&2 echo "\"$configfile\" is not readable!"
         exit 1
     fi
@@ -127,7 +128,8 @@ function parse_config { # parse_config file.cfg var_name1 var_name2
     do
         # IF lhs in keylist
         # AND rhs not empty
-        if [[ "$lhs" =~ ^($keylist)$ ]] && [[ -n $rhs ]]; then
+        if [[ "$lhs" =~ ^($keylist)$ ]] && [[ -n $rhs ]];
+        then
             rhs="${rhs%\"*}"     # Del opening string quotes
             rhs="${rhs#\"*}"     # Del closing string quotes
             rhs="${rhs%\'*}"     # Del opening string quotes
@@ -144,12 +146,13 @@ function parse_config { # parse_config file.cfg var_name1 var_name2
 
 function check_config { # check_config var1 var2 ...
 #
-# Check if the provided variables are set.
+# Check if the provided variables are set
 #
     local var
     for var in "${@}";
     do
-        if [ -z "${!var}" ]; then
+        if [ -z "${!var}" ];
+        then
             echo "Error: variable $var is empty!"
             exit 1
         fi
@@ -193,7 +196,7 @@ function ui_logout {
 
 function ui_active_clients {
 #
-# Get a list of all active clients on the site.
+# Get a list of all active clients on the site
 #
     ui_curl ${UI_SITE_API}/stat/sta --compressed
 }
@@ -201,7 +204,7 @@ function ui_active_clients {
 
 function ui_client {
 #
-# Get client details on the site.
+# Get client details on the site
 #
     local mac=$1
     ui_curl ${UI_SITE_API}/stat/user/${mac} --compressed
@@ -223,7 +226,7 @@ function nc_curl {
 
 function nc_homestatus {
 #
-# Get the thermmode from netatmo connect.
+# Get the thermmode from netatmo connect
 #
     nc_curl \
         --request GET \
@@ -234,7 +237,7 @@ function nc_homestatus {
 
 function nc_isthermmode {
 #
-# Verify the current thermmode status.
+# Verify the current thermmode status
 #
     case "$1" in
         schedule|status|hg)
@@ -250,7 +253,7 @@ function nc_isthermmode {
 
 function nc_getthermmode {
 #
-# Echo the current thermmode status.
+# Echo the current thermmode status
 #
     local mode="$(nc_homestatus)"
     mode="${mode##*\"therm_setpoint_mode\":\"}"
@@ -261,7 +264,7 @@ function nc_getthermmode {
 
 function nc_setthermmode {
 #
-# This function will update DNS A record in DirectAdmin to the new ip address
+# Set the thermostat mode
 #
     case "$1" in
         schedule|status|hg)
@@ -288,7 +291,7 @@ function now {
 
 
 #-------------------------------------------------------------------------------
-# 
+#
 # Parse configuration file
 #
 #-------------------------------------------------------------------------------
@@ -296,7 +299,8 @@ function now {
 #
 # Check input arguments
 #
-if (($# > 1 )); then
+if (($# > 1 ));
+then
     badUsage "Illegal number of arguments"
 fi
 
@@ -310,15 +314,16 @@ esac
 # Set UI and NC variables
 #
 
-# Initialize defaults 
+# Initialize defaults
 UI_SITENAME="${UI_SITENAME:-default}"
 UI_CLIENT_OFFLINE_SECONDS=${UI_CLIENT_OFFLINE_SECONDS:-900}
 
 # Parse config file
-if (($# == 1 )); then
+if (($# == 1 ));
+then
     parse_config $1 \
         UI_ADDRESS UI_USERNAME UI_PASSWORD UI_SITENAME UI_CLIENTS UI_CLIENT_OFFLINE_SECONDS \
-        NC_USER_ID NC_HOME_ID NC_USER_TOKEN 
+        NC_USER_ID NC_HOME_ID NC_USER_TOKEN
 fi
 
 # Check if mandatory variables are set
@@ -333,8 +338,8 @@ NC_API="https://api.netatmo.com/api"
 
 
 #-------------------------------------------------------------------------------
-# 
-# Verify frost guard 
+#
+# Verify frost guard
 #
 #-------------------------------------------------------------------------------
 
@@ -348,8 +353,8 @@ fi
 
 
 #-------------------------------------------------------------------------------
-# 
-# Client verification 
+#
+# Client verification
 #
 #-------------------------------------------------------------------------------
 
@@ -380,7 +385,7 @@ do
     elapsed=$(($now - $last_seen))
     echo "$CLIENT $hostname last seen $elapsed seconds ago."
 
-    if [ $elapsed > $UI_CLIENT_OFFLINE_SECONDS ];
+    if [ $elapsed -gt $UI_CLIENT_OFFLINE_SECONDS ];
     then
         off=false
     fi
@@ -390,8 +395,8 @@ ui_logout
 
 
 #-------------------------------------------------------------------------------
-# 
-# Thermostat mode 
+#
+# Set thermostat mode
 #
 #-------------------------------------------------------------------------------
 

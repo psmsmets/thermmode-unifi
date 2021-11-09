@@ -1,0 +1,9 @@
+# User related
+*.pwd
+*.key
+*.swp
+*.DS_Store
+*.nc
+*.log
+*.pub
+*.conf

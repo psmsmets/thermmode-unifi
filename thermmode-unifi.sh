@@ -511,7 +511,7 @@ then
     exit 1
 elif [ "$mode" == "hg" ];
 then
-    echo "** Thermostat is in frost guard mode ** "
+    verbose "** Thermostat is in frost guard mode ** "
     exit 0
 else
     verbose "** Thermostat mode = $mode **"
@@ -578,7 +578,7 @@ then
     echo "** Set thermostat mode to schedule **"
     resp=$(netatmo_setthermmode 'schedule')
 else
-    echo "** No need to change the thermostat mode **"
+    verbose "** No need to change the thermostat mode **"
 fi
 
 if echo $resp | grep error > /dev/null;

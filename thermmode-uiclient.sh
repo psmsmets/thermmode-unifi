@@ -8,6 +8,9 @@
 # E-mail        : mail@pietersmets.be
 ##############################################################################
 
+# exit when any command fails
+set -e
+
 #
 # Some usefull links to documentation to create this script
 #
@@ -211,36 +214,94 @@ function ui_client {
 }
 
 
+function nc_access_token {
+#
+# Netatmo Connect oauth2 access token
+#
+    response=$(/usr/bin/curl \
+        --silent \
+        --show-error \
+        --header "accept: application/json" \
+        --data grant_type=password \
+        --data client_id=$NC_CLIENT_ID \
+        --data client_secret=$NC_CLIENT_SECRET \
+        --data username=$NC_USERNAME \
+        --data password=$NC_PASSWORD \
+        --data scope="read_thermostat write_thermostat" \
+        https://api.netatmo.com/oauth2/token)
+    if echo $response | grep error > /dev/null;
+    then
+        echo $response && exit 1
+    fi   
+    NC_ACCESS_TOKEN="${response##*\"access_token\":\"}"
+    NC_ACCESS_TOKEN="${NC_ACCESS_TOKEN%%\"*}"
+}
+
+
 function nc_curl {
 #
 # Netatmo Connect curl alias
 #
-    /usr/bin/curl \
+    if [ "$NC_ACCESS_TOKEN" == "" ];
+    then
+        echo "error: NC_ACCESS_TOKEN is empty"
+        exit 1
+    fi
+    response=$(/usr/bin/curl \
         --silent \
         --show-error \
         --header "accept: application/json" \
-        --header "Authorization: Bearer ${NC_USER_ID}|${NC_USER_TOKEN}" \
-        "$@"
+        --header "Authorization: Bearer $NC_ACCESS_TOKEN" \
+        "$@")
+    echo $response
+    if echo $response | grep error > /dev/null;
+    then
+        exit 1
+    fi
+}
+
+
+function nc_homesdata {
+#
+# Get the homesdata from Netatmo Connect
+#
+    nc_curl \
+        --request GET \
+        ${NC_API}/homesdata
+}
+
+
+function nc_gethomeid {
+#
+# Get the first home id from Netatmo Connect
+#
+    local resp="$(nc_homesdata || echo "error")"
+    if ! echo $resp | grep error > /dev/null;
+    then
+        resp="${resp##*\"homes\":[\{\"id\":\"}"
+        resp="${resp%%\"*}"
+    fi
+    echo $resp
 }
 
 
 function nc_homestatus {
 #
-# Get the thermmode from netatmo connect
+# Get the homestatus from Netatmo energy
 #
     nc_curl \
         --request GET \
-        --data home_id=${NC_HOME_ID} \
+        --data home_id=$NC_HOME_ID \
         ${NC_API}/homestatus
 }
 
 
 function nc_isthermmode {
 #
-# Verify the current thermmode status
+# Verify if the current thermostat mode is schedule|away|hg
 #
     case "$1" in
-        schedule|status|hg)
+        schedule|away|hg)
         ;;
         *)
         echo "thermmode status should be any of 'schedule|away|hg'!"
@@ -253,12 +314,15 @@ function nc_isthermmode {
 
 function nc_getthermmode {
 #
-# Echo the current thermmode status
+# Get the thermostat mode
 #
-    local mode="$(nc_homestatus)"
-    mode="${mode##*\"therm_setpoint_mode\":\"}"
-    mode="${mode%%\"*}"
-    echo $mode
+    local resp="$(nc_homestatus || echo "error")"
+    if ! echo $resp | grep error > /dev/null;
+    then
+        resp="${resp##*\"therm_setpoint_mode\":\"}"
+        resp="${resp%%\"*}"
+    fi
+    echo $resp
 }
 
 
@@ -267,26 +331,18 @@ function nc_setthermmode {
 # Set the thermostat mode
 #
     case "$1" in
-        schedule|status|hg)
+        schedule|away|hg)
         ;;
         *)
         echo "thermmode status should be any of 'schedule|away|hg'!"
         exit 1
         ;;
     esac
-    curl \
+    nc_curl \
         --request POST \
-        --data home_id=${NC_HOME_ID} \
-        --data mode=${mode} \
+        --data home_id=$NC_HOME_ID \
+        --data mode=$1 \
         ${NC_API}/setthermmode
-}
-
-
-function now {
-#
-# Get current time in epoch seconds
-#
-    date +%s
 }
 
 
@@ -323,19 +379,32 @@ if (($# == 1 ));
 then
     parse_config $1 \
         UI_ADDRESS UI_USERNAME UI_PASSWORD UI_SITENAME UI_CLIENTS UI_CLIENT_OFFLINE_SECONDS \
-        NC_USER_ID NC_HOME_ID NC_USER_TOKEN
+        NC_CLIENT_ID NC_CLIENT_SECRET NC_USERNAME NC_PASSWORD NC_HOME_ID
 fi
 
 # Check if mandatory variables are set
 check_config UI_ADDRESS UI_USERNAME UI_PASSWORD UI_SITENAME UI_CLIENTS
-check_config NC_USER_ID NC_HOME_ID NC_USER_TOKEN
+check_config NC_CLIENT_ID NC_CLIENT_SECRET NC_USERNAME NC_PASSWORD
 
 # Construct derived variables
 UI_COOKIE=$(mktemp)
 UI_API="${UI_ADDRESS}/proxy/network/api"
 UI_SITE_API="${UI_API}/s/${UI_SITENAME}"
 NC_API="https://api.netatmo.com/api"
+NC_ACCESS_TOKEN=""
 
+#-------------------------------------------------------------------------------
+#
+# Netatmo Connect access token and home id
+#
+#-------------------------------------------------------------------------------
+
+nc_access_token
+
+if [ "$NC_HOME_ID" == "" ];
+then
+    NC_HOME_ID=$(nc_gethomeid)
+fi
 
 #-------------------------------------------------------------------------------
 #
@@ -343,9 +412,13 @@ NC_API="https://api.netatmo.com/api"
 #
 #-------------------------------------------------------------------------------
 
-mode="$(nc_getthermmode)"
+mode="$(nc_getthermmode || echo "error")"
 
-if [ "$mode" == "hg" ];
+if echo $mode | grep error > /dev/null;
+then
+    echo "** $mode ** "
+    exit 1
+elif [ "$mode" == "hg" ];
 then
     echo "** Thermostat is in frost guard mode ** "
     exit 0
@@ -358,8 +431,8 @@ fi
 #
 #-------------------------------------------------------------------------------
 
-now=$(now)
-off=true
+now=$(date +%s)
+off='true'
 
 ui_login
 
@@ -383,11 +456,12 @@ do
     last_seen="${last_seen%%,*}"
 
     elapsed=$(($now - $last_seen))
+
     echo "$CLIENT $hostname last seen $elapsed seconds ago."
 
-    if [ $elapsed -gt $UI_CLIENT_OFFLINE_SECONDS ];
+    if [ $elapsed -lt $UI_CLIENT_OFFLINE_SECONDS ];
     then
-        off=false
+        off='false'
     fi
 done
 
@@ -400,17 +474,24 @@ ui_logout
 #
 #-------------------------------------------------------------------------------
 
-if [ "$off" == "true" ] & [ "$mode" == "schedule" ];
+resp=''
+
+if [ "$off" == "true" ] && [ "$mode" == "schedule" ];
 then
     echo "** Set thermostat mode to away **"
-    nc_setthermmode 'away'
-elif [ "$off" == "false" ] & [ "$mode" == "away" ];
+    resp=$(nc_setthermmode 'away')
+elif [ "$off" == "false" ] && [ "$mode" == "away" ];
 then
     echo "** Set thermostat mode to schedule **"
-    nc_setthermmode 'schedule'
+    resp=$(nc_setthermmode 'schedule')
 else
     echo "** No need to change the thermostat mode **"
 fi
 
-
-exit 0
+if echo $resp | grep error > /dev/null;
+then
+    echo $resp
+    exit 1
+else
+    exit 0
+fi

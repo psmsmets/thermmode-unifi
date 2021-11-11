@@ -384,7 +384,7 @@ function verbose {
 #
     if [ $DO_VERB -eq 1 ];
     then
-        echo $@
+        echo "$@"
     fi
 }
 

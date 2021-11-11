@@ -41,28 +41,57 @@ If you don't know your home id the field can be left blank. The script will get 
 Usage:  thermmode-unifi.sh <config_file>
 
 Options:
- -C, --config        Print a demo <config_file> with all variables
+ -C, --config        Print a demo configuration file with all variables
  -h, --help          Print help
  -v, --verbose       Make the operation more talkative
  -V, --version       Show version number and quit
 ```
 
-Define all of the following variables either in a configuration file or as environment variables
+Complete all of the following variables either in a configuration file or as environment variables
 ```
-# UniFi controller configuration
-UNIFI_ADDRESS  = https://url_or_ip_of_your_controller
+### thermmode-unifi configuration file.
+
+# The commented out lines are the configuration field and the default value used.
+
+###
+### UniFi controller configuration
+###
+
+# UniFi controller address
+UNIFI_ADDRESS = "https://url_or_ip_of_your_controller"
+
+# UniFi sitename.
+# UNIFI_SITENAME = "default"
+
+# UniFi controller username and password (preferably a local account with read-only rights)
 UNIFI_USERNAME = ...
 UNIFI_PASSWORD = ...
-UNIFI_SITENAME = default  # default value and optional
-UNIFI_CLIENTS  = aa:aa:aa:aa:aa:aa bb:bb:bb:bb:bb:bb cc:cc:cc:cc:cc:cc # List mac addresses (space separated)
-UNIFI_CLIENT_OFFLINE_SECONDS = 900 # default value and optional
 
-# Netatmo connect configuration
-NETATMO_CLIENT_ID     = 
-NETATMO_CLIENT_SECRET = 
-NETATMO_USERNAME      =
-NETATMO_PASSWORD      =
-NETATMO_HOME_ID       =
+# List of client mac addresses (space separated)
+UNIFI_CLIENTS = aa:aa:aa:aa:aa:aa bb:bb:bb:bb:bb:bb cc:cc:cc:cc:cc:cc
+
+# Clients last seen threshold to set thermmode=away
+# UNIFI_CLIENTS_OFFLINE_SECONDS = 900
+
+###
+### Netatmo connect configuration
+###
+
+# A personal netatmo connect app registered to your username is required.
+# Create your app at https://dev.netatmo.com/apps.
+# The app is needed for authentication to obtain an Oauth2 Bearer token from
+# your username and password.
+
+# Netatmo connect app technical parameters: client id and secret.
+NETATMO_CLIENT_ID = ...
+NETATMO_CLIENT_SECRET = ...
+
+# Netatmo username and password
+NETATMO_USERNAME = ...
+NETATMO_PASSWORD = ...
+
+# Netamo home id (optional, defaults to the first of your homes)
+# NETATMO_HOME_ID = ...
 ```
 
 Missing variables from the configuration file are assumed to be set in your shell (locally or as enviroment variables).

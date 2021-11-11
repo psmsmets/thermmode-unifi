@@ -422,6 +422,8 @@ elif [ "$mode" == "hg" ];
 then
     echo "** Thermostat is in frost guard mode ** "
     exit 0
+else
+    echo "** Thermostat mode = $mode **"
 fi
 
 

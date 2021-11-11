@@ -1,5 +1,5 @@
-# thermmode-uiclient
-UniFi client montoring for geolocation-like functionality of the Netatmo Smart Thermostat.
+# thermmode-unifi-clients
+Enable geolocation-like functionality of the Netatmo Smart Thermostat by monitoring UniFi clients.
 
 UniFi clients of interest are monitored to automatically set the thermostat mode.
 The thermostat is set to `away` when all listed clients are disconnected longer
@@ -36,7 +36,7 @@ UI_CLIENTS = aa:aa:aa:aa:aa:aa bb:bb:bb:bb:bb:bb cc:cc:cc:cc:cc:cc # List mac ad
 UI_CLIENT_OFFLINE_SECONDS = 900 # default value and optional
 ```
 
-### Netatmo Connect API
+### Netatmo Connect
 
 Create an app at https://dev.netatmo.com to obtain the API `client ID` and `client secret` to make connection via Oauth2 Bearer.
 Authentication is obtained via client credentials (https://dev.netatmo.com/apidocumentation/oauth#client-credential).

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ##############################################################################
-# Script Name	: thermmode-uiclient
+# Script Name	: thermmode-unifi
 # Description	: Netatmo smart thermostat mode by connected UniFi clients
 # Args          : <config_file>
 # Author       	: Pieter Smets
@@ -22,6 +22,9 @@ set -e
 # Name of the script
 SCRIPT=$( basename "$0" )
 
+# Current version from git
+VERSION=$( git describe --tag --abbrev=0 2>&1 )
+
 
 #-------------------------------------------------------------------------------
 #
@@ -36,21 +39,13 @@ function usage {
     local txt=(
 "UniFi client montoring for geolocation-like functionality of the Netatmo Smart Thermostat."
 ""
-"UniFi clients of interest are monitored to automatically set the thermostat mode."
-"The thermostat is set to 'mode=away' when all listed clients are disconnected longer "
-"than the threshold UNIFI_CLIENTS_OFFLINE_SECONDS (defaults to 900s)."
-"As soon as any of the listed clients reconnects the thermostat is set to 'mode=schedule'."
-""
-"Clients of interest are listed by their mac address (formatted 12:34:56:78:90:ab) and"
-"corresponding connection details are retrieved from the UniFi's controller."
-""
-"When the thermostat mode is set to frost guard ('mode=hg') client monitoring is disabled."
-""
 "Usage:  $SCRIPT <config_file>"
 ""
-"Required config/environment variables:"
-"  UNIFI_ADDRESS UNIFI_USERNAME UNIFI_PASSWORD UNIFI_SITENAME UNIFI_CLIENTS UNIFI_CLIENTS_OFFLINE_SECONDS"
-"  NETATMO_CLIENT_ID NETATMO_CLIENT_SECRET NETATMO_USERNAME NETATMO_PASSWORD"
+"Options:"
+" -C, --config        Print a demo <config_file> with all variables"
+" -h, --help          Print help"
+" -v, --verbose       Make the operation more talkative"
+" -V, --version       Show version number and quit"
     )
 
     printf "%s\n" "${txt[@]}"
@@ -72,6 +67,43 @@ function badUsage {
 
     printf "%s\n" "${txt[@]}"
     exit -1
+}
+
+
+function version
+{
+#
+# Message to display for version.
+#
+    printf "$VERSION\n"
+    exit 0
+}
+
+
+function config 
+{
+#
+# Message to display for version.
+#
+    local txt=(
+"# UniFi controller configuration"
+"UNIFI_ADDRESS  = https://url_or_ip_of_your_controller"
+"UNIFI_USERNAME = ..."
+"UNIFI_PASSWORD = ..."
+"UNIFI_SITENAME = default  # default value and optional"
+"UNIFI_CLIENTS  = aa:aa:aa:aa:aa:aa bb:bb:bb:bb:bb:bb cc:cc:cc:cc:cc:cc # List mac addresses (space separated)"
+"UNIFI_CLIENT_OFFLINE_SECONDS = 900 # default value and optional"
+""
+"# Netatmo connect configuration"
+"NETATMO_CLIENT_ID     = ..."
+"NETATMO_CLIENT_SECRET = ..."
+"NETATMO_USERNAME      = ..."
+"NETATMO_PASSWORD      = ..."
+"NETATMO_HOME_ID       =  # optional"
+    )
+
+    printf "%s\n" "${txt[@]}"
+    exit 0
 }
 
 
@@ -346,24 +378,50 @@ function netatmo_setthermmode {
 }
 
 
+function verbose {
+#
+# Talkative mode: echo only when --verbose
+#
+    if [ $DO_VERB -eq 1 ];
+    then
+        echo $@
+    fi
+}
+
+
 #-------------------------------------------------------------------------------
 #
-# Parse configuration file
+# Parse arguments and configuration file
 #
 #-------------------------------------------------------------------------------
 
 #
-# Check input arguments
+# Parse options
+#
+DO_VERB=0
+while (( $# ));
+do
+    case "$1" in
+        -c|--config) config
+        ;;
+        -h|--help) usage
+        ;;
+        -v|--verbose) DO_VERB=1;
+        ;;
+        -V|--version) version
+        ;;
+        *) break
+    esac
+    shift
+done
+
+#
+# Check arguments
 #
 if (($# > 1 ));
 then
     badUsage "Illegal number of arguments"
 fi
-
-case "$1" in
-    help|--help|-h) usage
-    ;;
-esac
 
 
 #
@@ -378,8 +436,10 @@ UNIFI_CLIENTS_OFFLINE_SECONDS=${UNIFI_CLIENTS_OFFLINE_SECONDS:-900}
 if (($# == 1 ));
 then
     parse_config $1 \
-        UNIFI_ADDRESS UNIFI_USERNAME UNIFI_PASSWORD UNIFI_SITENAME UNIFI_CLIENTS UNIFI_CLIENTS_OFFLINE_SECONDS \
-        NETATMO_CLIENT_ID NETATMO_CLIENT_SECRET NETATMO_USERNAME NETATMO_PASSWORD NETATMO_HOME_ID
+        UNIFI_ADDRESS UNIFI_USERNAME UNIFI_PASSWORD UNIFI_SITENAME \
+        UNIFI_CLIENTS UNIFI_CLIENTS_OFFLINE_SECONDS \
+        NETATMO_CLIENT_ID NETATMO_CLIENT_SECRET NETATMO_USERNAME NETATMO_PASSWORD \
+        NETATMO_HOME_ID
 fi
 
 # Check if mandatory variables are set
@@ -393,6 +453,7 @@ UNIFI_SITE_API="${UNIFI_API}/s/${UNIFI_SITENAME}"
 NETATMO_API="https://api.netatmo.com/api"
 NETATMO_ACCESS_TOKEN=""
 
+
 #-------------------------------------------------------------------------------
 #
 # Netatmo Connect access token and home id
@@ -405,6 +466,7 @@ if [ "$NETATMO_HOME_ID" == "" ];
 then
     NETATMO_HOME_ID=$(netatmo_gethomeid)
 fi
+
 
 #-------------------------------------------------------------------------------
 #
@@ -420,10 +482,10 @@ then
     exit 1
 elif [ "$mode" == "hg" ];
 then
-    echo "** Thermostat is in frost guard mode ** "
+    verbose "** Thermostat is in frost guard mode ** "
     exit 0
 else
-    echo "** Thermostat mode = $mode **"
+    verbose "** Thermostat mode = $mode **"
 fi
 
 
@@ -446,7 +508,7 @@ do
     # Check if client is configured
     if ! echo $CLIENT_DATA | grep "\"meta\":{\"rc\":\"ok\"}" >/dev/null 2>&1;
     then
-        echo "$CLIENT is not a configured client."
+        verbose "$CLIENT is not a configured client."
         continue
     fi
 
@@ -459,7 +521,7 @@ do
 
     elapsed=$(($now - $last_seen))
 
-    echo "$CLIENT $hostname last seen $elapsed seconds ago."
+    verbose "$CLIENT $hostname last seen $elapsed seconds ago."
 
     if [ $elapsed -lt $UNIFI_CLIENTS_OFFLINE_SECONDS ];
     then
@@ -487,7 +549,7 @@ then
     echo "** Set thermostat mode to schedule **"
     resp=$(netatmo_setthermmode 'schedule')
 else
-    echo "** No need to change the thermostat mode **"
+    verbose "** No need to change the thermostat mode **"
 fi
 
 if echo $resp | grep error > /dev/null;

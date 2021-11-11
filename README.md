@@ -1,4 +1,4 @@
-# thermmode-unifi-clients
+# thermmode-unifi
 Enable geolocation-like functionality of the Netatmo Smart Thermostat by monitoring UniFi clients.
 
 UniFi clients of interest are monitored to automatically set the thermostat mode.
@@ -38,7 +38,7 @@ If you don't know your home id the field can be left blank. The script will get 
 
 ## Usage
 ```
-Usage:  thermmode-unifi-clients.sh <config_file>
+Usage:  thermmode-unifi.sh <config_file>
 
 Options:
  -C, --config        Print a demo <config_file> with all variables
@@ -71,7 +71,7 @@ Missing variables from the configuration file are assumed to be set in your shel
 ## Automatic trigger via Crontab
 Trigger the Netatmo thermostat mode update every two minute using crontab (`sudo crontab -e`) and log the output in syslog.
 ```
-*/2 * * * * thermmode-unifi-clients.sh my-home.conf 2>&1 | /usr/bin/logger -t netatmo 
+*/2 * * * * thermmode-unifi.sh my-home.conf 2>&1 | /usr/bin/logger -t netatmo 
 ```
 Make sure that the absolute path to both the script and configuration file are set.
 

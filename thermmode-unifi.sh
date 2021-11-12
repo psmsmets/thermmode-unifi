@@ -23,7 +23,7 @@ set -e
 SCRIPT=$( basename "$0" )
 
 # Current version from git
-VERSION=$( git describe --tag --abbrev=0 2>&1 )
+VERSION="v0.2.2"
 
 
 #-------------------------------------------------------------------------------
@@ -435,7 +435,7 @@ do
         ;;
         -h|--help) usage
         ;;
-        -v|--verbose) DO_VERB=1;
+        -v|--verbose) DO_VERB=1
         ;;
         -V|--version) version
         ;;
@@ -451,7 +451,6 @@ if (($# > 1 ));
 then
     badUsage "Illegal number of arguments"
 fi
-
 
 #
 # Set UNIFI and NETATMO variables

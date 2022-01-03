@@ -23,7 +23,7 @@ set -e
 SCRIPT=$( basename "$0" )
 
 # Current version from git
-VERSION="v0.2.2"
+VERSION="v0.3.0"
 
 
 #-------------------------------------------------------------------------------
@@ -459,13 +459,14 @@ fi
 # Initialize defaults
 UNIFI_SITENAME="${UNIFI_SITENAME:-default}"
 UNIFI_CLIENTS_OFFLINE_SECONDS=${UNIFI_CLIENTS_OFFLINE_SECONDS:-900}
+UNIFI_CLIENTS_IGNORE_SECONDS=${UNIFI_CLIENTS_OFFLINE_SECONDS:-3600}
 
 # Parse config file
 if (($# == 1 ));
 then
     parse_config $1 \
         UNIFI_ADDRESS UNIFI_USERNAME UNIFI_PASSWORD UNIFI_SITENAME \
-        UNIFI_CLIENTS UNIFI_CLIENTS_OFFLINE_SECONDS \
+        UNIFI_CLIENTS UNIFI_CLIENTS_OFFLINE_SECONDS UNIFI_CLIENTS_IGNORE_SECONDS \
         NETATMO_CLIENT_ID NETATMO_CLIENT_SECRET NETATMO_USERNAME NETATMO_PASSWORD \
         NETATMO_HOME_ID
 fi
@@ -498,33 +499,14 @@ fi
 
 #-------------------------------------------------------------------------------
 #
-# Verify frost guard
-#
-#-------------------------------------------------------------------------------
-
-mode="$(netatmo_getthermmode || echo "error")"
-
-if echo $mode | grep error > /dev/null;
-then
-    echo "** $mode ** "
-    exit 1
-elif [ "$mode" == "hg" ];
-then
-    verbose "** Thermostat is in frost guard mode ** "
-    exit 0
-else
-    verbose "** Thermostat mode = $mode **"
-fi
-
-
-#-------------------------------------------------------------------------------
-#
 # Client verification
 #
 #-------------------------------------------------------------------------------
 
 now=$(date +%s)
-off='true'
+
+ignore=1
+offline=0
 
 unifi_login
 
@@ -539,6 +521,7 @@ do
         verbose "$CLIENT is not a configured client."
         continue
     fi
+    # echo $CLIENT_DATA
 
     # Parse client data
     hostname="${CLIENT_DATA##*\"hostname\":\"}"
@@ -548,16 +531,44 @@ do
     last_seen="${last_seen%%,*}"
 
     elapsed=$(($now - $last_seen))
+    # echo "$now $last_seen"
 
     verbose "$CLIENT $hostname last seen $elapsed seconds ago."
 
     if [ $elapsed -lt $UNIFI_CLIENTS_OFFLINE_SECONDS ];
     then
-        off='false'
+        offline=0
+        ignore=0
+    elif [ $elapsed -lt $UNIFI_CLIENTS_IGNORE_SECONDS ];
+    then
+        ignore=0
     fi
 done
 
 unifi_logout
+
+if [ $offline -eq 0 ] && [ $ignore -eq 0 ];
+then
+    unifi_mode='active'
+elif [ $offline -eq 1 ] && [ $ignore -eq 0];
+then
+    unifi_mode='offline'
+else
+    unifi_mode='ignore'
+fi
+
+
+touch $HOME/.thermmode-unifi.mode
+
+previous_mode=$(cat $HOME/.thermmode-unifi.mode)
+
+if [ "$previous_mode" == "$unifi_mode" ];
+then
+    verbose "** No change in thermostat mode **"
+    exit 0
+fi
+
+echo "$unifi_mode" > $HOME/.thermmode-unifi.mode
 
 
 #-------------------------------------------------------------------------------
@@ -568,22 +579,40 @@ unifi_logout
 
 resp=''
 
-if [ "$off" == "true" ] && [ "$mode" == "schedule" ];
+if [ "$unifi_mode" != "ignore" ];
 then
-    echo "** Set thermostat mode to away **"
-    resp=$(netatmo_setthermmode 'away')
-elif [ "$off" == "false" ] && [ "$mode" == "away" ];
-then
-    echo "** Set thermostat mode to schedule **"
-    resp=$(netatmo_setthermmode 'schedule')
-else
-    verbose "** No need to change the thermostat mode **"
+
+    therm_mode="$(netatmo_getthermmode || echo "error")"
+
+    if echo $therm_mode | grep error > /dev/null;
+    then
+        echo "** $therm_mode ** "
+        exit 1
+    elif [ "$therm_mode" == "hg" ];
+    then
+        verbose "** Thermostat is in frost guard mode ** "
+        exit 0
+    else
+        verbose "** Thermostat mode = $therm_mode **"
+    fi
+
+    if [ "$unifi_mode" == "offline" ] && [ "$therm_mode" == "schedule" ];
+    then
+        echo "** Set thermostat mode to away **"
+        resp=$(netatmo_setthermmode 'away')
+    elif [ "$unifi_mode" == "active" ] && [ "$therm_mode" == "away" ];
+    then
+        echo "** Set thermostat mode to schedule **"
+        resp=$(netatmo_setthermmode 'schedule')
+    else
+        verbose "** No need to change the thermostat mode **"
+    fi
+
+    if echo $resp | grep error > /dev/null;
+    then
+        echo $resp
+        exit 1
+    fi
 fi
 
-if echo $resp | grep error > /dev/null;
-then
-    echo $resp
-    exit 1
-else
-    exit 0
-fi
+exit 0

@@ -44,6 +44,7 @@ function usage {
 "Options:"
 " -C, --config        Print a demo configuration file with all variables"
 " -h, --help          Print help"
+" -m, --mode          Print previous unifi mode"
 " -v, --verbose       Make the operation more talkative"
 " -V, --version       Show version number and quit"
     )
@@ -421,6 +422,17 @@ function verbose {
 
 #-------------------------------------------------------------------------------
 #
+# Previous run thermmode status
+#
+#-------------------------------------------------------------------------------
+
+touch $HOME/.thermmode-unifi.mode
+
+previous_mode=$(cat $HOME/.thermmode-unifi.mode)
+
+
+#-------------------------------------------------------------------------------
+#
 # Parse arguments and configuration file
 #
 #-------------------------------------------------------------------------------
@@ -435,6 +447,8 @@ do
         -c|--config) config
         ;;
         -h|--help) usage
+        ;;
+        -m|--mode) echo "unifi_mode=$previous_mode" && exit 0
         ;;
         -v|--verbose) DO_VERB=1
         ;;
@@ -506,11 +520,14 @@ fi
 
 now=$(date +%s)
 
+# init states
 ignore=1
 offline=1
 
+# login to unifi controller
 unifi_login
 
+# verify client activity
 for CLIENT in $UNIFI_CLIENTS;
 do
     # Get client data
@@ -546,8 +563,10 @@ do
     fi
 done
 
+# logout from unifi controller
 unifi_logout
 
+# set mode from states
 if [ $offline -eq 0 ] && [ $ignore -eq 0 ];
 then
     unifi_mode='active'
@@ -558,11 +577,7 @@ else
     unifi_mode='ignore'
 fi
 
-
-touch $HOME/.thermmode-unifi.mode
-
-previous_mode=$(cat $HOME/.thermmode-unifi.mode)
-
+# compare current with previous mode
 if [ "$previous_mode" == "$unifi_mode" ];
 then
     verbose "** No change in thermostat mode **"

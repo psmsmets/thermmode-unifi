@@ -23,7 +23,7 @@ set -e
 SCRIPT=$( basename "$0" )
 
 # Current version from git
-VERSION="v0.3.0"
+VERSION="v0.3.1"
 
 
 #-------------------------------------------------------------------------------
@@ -108,7 +108,8 @@ function config
 "UNIFI_CLIENTS = aa:aa:aa:aa:aa:aa bb:bb:bb:bb:bb:bb cc:cc:cc:cc:cc:cc"
 ""
 "# Clients last seen threshold to set thermmode=away"
-"# UNIFI_CLIENTS_OFFLINE_SECONDS = 900"
+"# UNIFI_CLIENTS_OFFLINE_SECONDS = 600"
+"# UNIFI_CLIENTS_IGNORE_SECONDS  = 1800"
 ""
 "###"
 "### Netatmo connect configuration"
@@ -458,8 +459,8 @@ fi
 
 # Initialize defaults
 UNIFI_SITENAME="${UNIFI_SITENAME:-default}"
-UNIFI_CLIENTS_OFFLINE_SECONDS=${UNIFI_CLIENTS_OFFLINE_SECONDS:-900}
-UNIFI_CLIENTS_IGNORE_SECONDS=${UNIFI_CLIENTS_OFFLINE_SECONDS:-3600}
+UNIFI_CLIENTS_OFFLINE_SECONDS=${UNIFI_CLIENTS_OFFLINE_SECONDS:-600}
+UNIFI_CLIENTS_IGNORE_SECONDS=${UNIFI_CLIENTS_IGNORE_SECONDS:-1800}
 
 # Parse config file
 if (($# == 1 ));

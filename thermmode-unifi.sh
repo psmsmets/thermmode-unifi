@@ -506,7 +506,7 @@ fi
 now=$(date +%s)
 
 ignore=1
-offline=0
+offline=1
 
 unifi_login
 

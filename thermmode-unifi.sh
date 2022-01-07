@@ -550,7 +550,7 @@ unifi_logout
 if [ $offline -eq 0 ] && [ $ignore -eq 0 ];
 then
     unifi_mode='active'
-elif [ $offline -eq 1 ] && [ $ignore -eq 0];
+elif [ $offline -eq 1 ] && [ $ignore -eq 0 ];
 then
     unifi_mode='offline'
 else

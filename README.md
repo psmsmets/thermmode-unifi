@@ -43,6 +43,8 @@ Usage:  thermmode-unifi.sh <config_file>
 Options:
  -C, --config        Print a demo configuration file with all variables
  -h, --help          Print help
+ -m, --mode          Print the previous unifi mode"
+ -f, --force         Ignore the stored unifi mode and force syncing the thermostat
  -v, --verbose       Make the operation more talkative
  -V, --version       Show version number and quit
 ```
@@ -87,9 +89,9 @@ UNIFI_CLIENTS = aa:aa:aa:aa:aa:aa bb:bb:bb:bb:bb:bb cc:cc:cc:cc:cc:cc
 NETATMO_CLIENT_ID = ...
 NETATMO_CLIENT_SECRET = ...
 
-# Netatmo username and password
-NETATMO_USERNAME = ...
-NETATMO_PASSWORD = ...
+# Netatmo access token.
+NETATMO_ACCESS_TOKEN = ...
+NETATMO_REFRESH_TOKEN = ...
 
 # Netamo home id (optional, defaults to the first of your homes)
 # NETATMO_HOME_ID = ...
@@ -109,3 +111,7 @@ Scan the syslog output
 ```
 cat /var/log/syslog | grep netatmo
 ```
+
+## Netatmo access
+
+Create an app <https://dev.netatmo.com/apps/> to obtain the cliend ID and secret (App Technical Parameters) and a non-expiring token (Token generator with scopes `read_thermostat` and `write_thermostat`). 

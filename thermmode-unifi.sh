@@ -23,7 +23,7 @@ set -e
 SCRIPT=$( basename "$0" )
 
 # Current version from git
-VERSION="v0.3.2"
+VERSION="v0.4.0"
 
 
 #-------------------------------------------------------------------------------
@@ -44,7 +44,8 @@ function usage {
 "Options:"
 " -C, --config        Print a demo configuration file with all variables"
 " -h, --help          Print help"
-" -m, --mode          Print previous unifi mode"
+" -m, --mode          Print the previous unifi mode"
+" -f, --force         Ignore the stored unifi mode and force syncing the thermostat"
 " -v, --verbose       Make the operation more talkative"
 " -V, --version       Show version number and quit"
     )
@@ -125,9 +126,9 @@ function config
 "NETATMO_CLIENT_ID = ..."
 "NETATMO_CLIENT_SECRET = ..."
 ""
-"# Netatmo username and password"
-"NETATMO_USERNAME = ..."
-"NETATMO_PASSWORD = ..."
+"# Netatmo access token"
+"NETATMO_ACCESS_TOKEN = ..."
+"NETATMO_REFRESH_TOKEN = ..."
 ""
 "# Netamo home id (optional, defaults to the first of your homes)"
 "# NETATMO_HOME_ID = ..."
@@ -285,7 +286,7 @@ function netatmo_access_token {
         --silent \
         --show-error \
         --header "accept: application/json" \
-        --data grant_type=password \
+        --data grant_type=authorization_code \
         --data client_id=$NETATMO_CLIENT_ID \
         --data client_secret=$NETATMO_CLIENT_SECRET \
         --data username=$NETATMO_USERNAME \
@@ -450,6 +451,8 @@ do
         ;;
         -m|--mode) echo "unifi_mode=$previous_mode" && exit 0
         ;;
+        -f|--force) previous_mode="__NONE__"
+        ;;
         -v|--verbose) DO_VERB=1
         ;;
         -V|--version) version
@@ -482,20 +485,19 @@ then
     parse_config $1 \
         UNIFI_ADDRESS UNIFI_USERNAME UNIFI_PASSWORD UNIFI_SITENAME \
         UNIFI_CLIENTS UNIFI_CLIENTS_OFFLINE_SECONDS UNIFI_CLIENTS_IGNORE_SECONDS \
-        NETATMO_CLIENT_ID NETATMO_CLIENT_SECRET NETATMO_USERNAME NETATMO_PASSWORD \
+        NETATMO_CLIENT_ID NETATMO_CLIENT_SECRET NETATMO_ACCESS_TOKEN NETATMO_REFRESH_TOKEN \
         NETATMO_HOME_ID
 fi
 
 # Check if mandatory variables are set
 check_config UNIFI_ADDRESS UNIFI_USERNAME UNIFI_PASSWORD UNIFI_SITENAME UNIFI_CLIENTS
-check_config NETATMO_CLIENT_ID NETATMO_CLIENT_SECRET NETATMO_USERNAME NETATMO_PASSWORD
+check_config NETATMO_CLIENT_ID NETATMO_CLIENT_SECRET NETATMO_ACCESS_TOKEN NETATMO_REFRESH_TOKEN
 
 # Construct derived variables
 UNIFI_COOKIE=$(mktemp)
 UNIFI_API="${UNIFI_ADDRESS}/proxy/network/api"
 UNIFI_SITE_API="${UNIFI_API}/s/${UNIFI_SITENAME}"
 NETATMO_API="https://api.netatmo.com/api"
-NETATMO_ACCESS_TOKEN=""
 
 
 #-------------------------------------------------------------------------------
@@ -504,7 +506,7 @@ NETATMO_ACCESS_TOKEN=""
 #
 #-------------------------------------------------------------------------------
 
-netatmo_access_token
+#netatmo_access_token
 
 if [ "$NETATMO_HOME_ID" == "" ];
 then

@@ -29,8 +29,8 @@ Add the UniFi Controller variables to your shell or the configuration file.
 
 ### Netatmo Connect
 
-Create an app at https://dev.netatmo.com to obtain the API `client ID` and `client secret` to make connection via Oauth2 Bearer.
-Authentication is obtained via client credentials (https://dev.netatmo.com/apidocumentation/oauth#client-credential).
+Create an app at <https://dev.netatmo.com/apps/> to obtain the API `client ID` and `client secret` (App Technical Parameters) and a non-expiring token (Token generator with scopes `read_thermostat` and `write_thermostat`). 
+Authentication is obtained via Oauth2 Bearer (<https://dev.netatmo.com/apidocumentation/oauth>).
 
 Add the Netatmo Connect variables to your shell or the configuration file.
 
@@ -107,11 +107,7 @@ Trigger the Netatmo thermostat mode update every two minute using crontab (`sudo
 ```
 Make sure that the absolute path to both the script and configuration file are set.
 
-Scan the syslog output
+Scan the syslog output via `journalctl`
 ```
-cat /var/log/syslog | grep netatmo
-```
-
-## Netatmo access
-
-Create an app <https://dev.netatmo.com/apps/> to obtain the cliend ID and secret (App Technical Parameters) and a non-expiring token (Token generator with scopes `read_thermostat` and `write_thermostat`). 
+journalctl -t netatmo --since today
+``` 

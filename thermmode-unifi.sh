@@ -295,6 +295,7 @@ function netatmo_access_token {
     then
         echo $response && exit 1
     fi
+    verbose $response
 
     NETATMO_ACCESS_TOKEN_="${response##*\"access_token\":\"}"
     NETATMO_ACCESS_TOKEN_="${NETATMO_ACCESS_TOKEN_%%\"*}"

@@ -82,7 +82,7 @@ function version
 }
 
 
-function config 
+function config
 {
 #
 # Message to display for version.
@@ -280,25 +280,37 @@ function unifi_client {
 
 function netatmo_access_token {
 #
-# Netatmo Connect oauth2 access token
+# Netatmo Connect oauth2 refresh access token
 #
     response=$(/usr/bin/curl \
         --silent \
         --show-error \
         --header "accept: application/json" \
-        --data grant_type=authorization_code \
+        --data grant_type=refresh_token \
         --data client_id=$NETATMO_CLIENT_ID \
         --data client_secret=$NETATMO_CLIENT_SECRET \
-        --data username=$NETATMO_USERNAME \
-        --data password=$NETATMO_PASSWORD \
-        --data scope="read_thermostat write_thermostat" \
+        --data refresh_token=$NETATMO_REFRESH_TOKEN \
         https://api.netatmo.com/oauth2/token)
     if echo $response | grep error > /dev/null;
     then
         echo $response && exit 1
-    fi   
-    NETATMO_ACCESS_TOKEN="${response##*\"access_token\":\"}"
-    NETATMO_ACCESS_TOKEN="${NETATMO_ACCESS_TOKEN%%\"*}"
+    fi
+
+    NETATMO_ACCESS_TOKEN_="${response##*\"access_token\":\"}"
+    NETATMO_ACCESS_TOKEN_="${NETATMO_ACCESS_TOKEN_%%\"*}"
+    if [ "$NETATMO_ACCESS_TOKEN" != "$NETATMO_ACCESS_TOKEN_" ];
+    then
+        sed -i 's#'$NETATMO_ACCESS_TOKEN'#'$NETATMO_ACCESS_TOKEN_'#g' $1
+        NETATMO_ACCESS_TOKEN=$NETATMO_ACCESS_TOKEN_
+    fi
+
+    NETATMO_REFRESH_TOKEN_="${response##*\"refresh_token\":\"}"
+    NETATMO_REFRESH_TOKEN_="${NETATMO_REFRESH_TOKEN_%%\"*}"
+    if [ "$NETATMO_REFRESH_TOKEN" != "$NETATMO_REFRESH_TOKEN_" ];
+    then
+        sed -i 's#'$NETATMO_REFRESH_TOKEN'#'$NETATMO_REFRESH_TOKEN_'#g' $1
+        NETATMO_REFRESH_TOKEN=$NETATMO_REFRESH_TOKEN_
+    fi
 }
 
 
@@ -506,13 +518,12 @@ NETATMO_API="https://api.netatmo.com/api"
 #
 #-------------------------------------------------------------------------------
 
-#netatmo_access_token
+netatmo_access_token $1
 
 if [ "$NETATMO_HOME_ID" == "" ];
 then
     NETATMO_HOME_ID=$(netatmo_gethomeid)
 fi
-
 
 #-------------------------------------------------------------------------------
 #

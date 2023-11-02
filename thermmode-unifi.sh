@@ -303,6 +303,7 @@ function netatmo_access_token {
     then
         sed -i 's#'$NETATMO_ACCESS_TOKEN'#'$NETATMO_ACCESS_TOKEN_'#g' $1
         NETATMO_ACCESS_TOKEN=$NETATMO_ACCESS_TOKEN_
+        verbose "** Netatmo access token updated **"
     fi
 
     NETATMO_REFRESH_TOKEN_="${response##*\"refresh_token\":\"}"
@@ -311,6 +312,7 @@ function netatmo_access_token {
     then
         sed -i 's#'$NETATMO_REFRESH_TOKEN'#'$NETATMO_REFRESH_TOKEN_'#g' $1
         NETATMO_REFRESH_TOKEN=$NETATMO_REFRESH_TOKEN_
+        verbose "** Netatmo refresh token updated **"
     fi
 }
 
@@ -525,6 +527,8 @@ if [ "$NETATMO_HOME_ID" == "" ];
 then
     NETATMO_HOME_ID=$(netatmo_gethomeid)
 fi
+
+verbose "Start $0 for home id $NETATMO_HOME_ID"
 
 #-------------------------------------------------------------------------------
 #
